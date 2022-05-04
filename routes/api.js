@@ -8,7 +8,37 @@ module.exports = app => {
     app.route('/api/issues/:project')
 
     .get((req, res) => {
-        let project = req.params.project;
+        let projectName = req.params.project;
+        //?open=true&assigned_to=Joe
+        const {
+            _id,
+            open,
+            issue_title,
+            issue_text,
+            created_by,
+            assigned_to,
+            status_text,
+        } = req.query;
+
+        // Aggregate query to get all issues for a project with the given parameters
+        ProjectModel.aggregate([
+            { $match: { name: projectName } }, // Filters the documents to pass only the documents that match the specified condition(s) to the next pipeline stage.
+            { $unwind: '$issues' }, // Deconstructs an array field from the input documents to output a document for each element
+            _id != undefined ? { $match: { 'issues._id': _id } } : { $match: {} },
+            open != undefined ? { $match: { 'issues.open': open } } : { $match: {} },
+            issue_title != undefined ? { $match: { 'issues.issue_title': issue_title } } : { $match: {} },
+            issue_text != undefined ? { $match: { 'issues.issue_text': issue_text } } : { $match: {} },
+            created_by != undefined ? { $match: { 'issues.created_by': created_by } } : { $match: {} },
+            assigned_to != undefined ? { $match: { 'issues.assigned_to': assigned_to } } : { $match: {} },
+            status_text != undefined ? { $match: { 'issues.status_text': status_text } } : { $match: {} },
+        ]).exec((err, issues) => {
+            if (!issues) {
+                res.json([])
+            } else {
+                let mappedIssues = issues.map(issue => issue.issues);
+                res.json(mappedIssues);
+            }
+        });
 
     })
 
