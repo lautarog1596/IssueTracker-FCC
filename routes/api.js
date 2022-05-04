@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const IssueModel = require('../models').Issue;
 const ProjectModel = require('../models').Project;
+const ObjectId = mongoose.Types.ObjectId;
 
 module.exports = app => {
 
@@ -24,7 +25,7 @@ module.exports = app => {
         ProjectModel.aggregate([
             { $match: { name: projectName } }, // Filters the documents to pass only the documents that match the specified condition(s) to the next pipeline stage.
             { $unwind: '$issues' }, // Deconstructs an array field from the input documents to output a document for each element
-            _id != undefined ? { $match: { 'issues._id': _id } } : { $match: {} },
+            _id != undefined ? { $match: { 'issues._id': ObjectId(_id) } } : { $match: {} },
             open != undefined ? { $match: { 'issues.open': open } } : { $match: {} },
             issue_title != undefined ? { $match: { 'issues.issue_title': issue_title } } : { $match: {} },
             issue_text != undefined ? { $match: { 'issues.issue_text': issue_text } } : { $match: {} },
@@ -94,7 +95,7 @@ module.exports = app => {
     })
 
     .put((req, res) => {
-        let project = req.params.project;
+        let projectName = req.params.project;
         const {
             _id,
             issue_title,
@@ -112,7 +113,7 @@ module.exports = app => {
             res.json({ error: "no update field(s) sent", _id: _id });
             return;
         }
-        ProjectModel.findOne({ name: project }, (err, projectdata) => {
+        ProjectModel.findOne({ name: projectName }, (err, projectdata) => {
             if (err || !projectdata) {
                 res.json({ error: "could not update", _id: _id })
                 return;
@@ -143,7 +144,32 @@ module.exports = app => {
 
     .delete((req, res) => {
         let project = req.params.project;
+        const { _id } = req.body;
+        if (!_id) {
+            res.json({ error: "missing _id" });
+            return;
+        }
+        ProjectModel.findOne({ name: project }, (err, projectdata) => {
+            if (err || !projectdata) {
+                res.json({ error: "could not delete", _id: _id })
+                return;
+            } else {
+                const issueData = projectdata.issues.id(_id)
+                if (!issueData) {
+                    res.json({ error: "could not delete", _id: _id })
+                    return;
+                }
+                issueData.remove();
 
+                projectdata.save((err, data) => {
+                    if (err || !data) {
+                        res.json({ error: "could not delete", _id: _id })
+                    } else {
+                        res.json({ result: "successfully deleted", _id: _id })
+                    }
+                });
+            }
+        });
     });
 
 };
