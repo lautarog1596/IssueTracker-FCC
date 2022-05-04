@@ -70,23 +70,19 @@ module.exports = app => {
             if (!projectdata) {
                 const newProject = new ProjectModel({ name: project });
                 newProject.issues.push(newIssue);
-                console.log(newProject);
                 newProject.save((err, data) => {
                     if (err || !data) {
                         res.send("There was an error saving in post")
                     } else {
-                        console.log("Saved new project");
                         res.json(newIssue);
                     }
                 });
             } else {
                 projectdata.issues.push(newIssue);
-                console.log(projectdata);
                 projectdata.save((err, data) => {
                     if (err || !data) {
                         res.send("There was an error saving in post")
                     } else {
-                        console.log("Saved project");
                         res.json(newIssue);
                     }
                 });
